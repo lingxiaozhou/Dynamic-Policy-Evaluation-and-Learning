@@ -1,0 +1,25 @@
+# R session and IDE files
+.Rhistory
+.RData
+.Ruserdata
+.Rproj.user/
+*.Rproj
+
+# OS/editor metadata
+.DS_Store
+Thumbs.db
+.vscode/
+
+# Local planning scratch files
+task_plan.md
+findings.md
+progress.md
+.planning/
+
+# Per-replicate simulation output can grow very large
+outputs/results/simulation/
+
+# Restricted application inputs retained locally but not distributed
+data/application/Maaws_PublicData.csv
+data/application/final_filter.csv
+data/application/*.rds
