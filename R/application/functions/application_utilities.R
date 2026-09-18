@@ -1896,6 +1896,12 @@ prepare_application_data <- function(aid_csv, troop_density_csv) {
   )
 
   tf_raw <- data.table::fread(troop_density_csv, colClasses = list(integer = "week"))
+  required_tf_columns <- c("District", "week", "TForce")
+  missing_tf_columns <- setdiff(required_tf_columns, names(tf_raw))
+  if (length(missing_tf_columns) > 0L) {
+    stop("Troop-density input is missing required columns: ",
+         paste(missing_tf_columns, collapse = ", "))
+  }
   origin_date <- lubridate::ymd("2005-05-02") - lubridate::weeks(2358 - 1)
   tf_raw[, week_start := origin_date + lubridate::weeks(week - 1)]
 
@@ -1920,7 +1926,8 @@ prepare_application_data <- function(aid_csv, troop_density_csv) {
     mat2
   }
 
-  tf_array_US <- make_tf_array(tf_raw[british == 0])
+  # CSM_filter.csv is already restricted to observations with british == 0.
+  tf_array_US <- make_tf_array(tf_raw)
   res_list$tf_array_US <- tf_array_US
   res_list$tf_array_US[is.na(tf_array_US)] <- 0
   res_list$tf_array_US_missing <- is.na(tf_array_US)

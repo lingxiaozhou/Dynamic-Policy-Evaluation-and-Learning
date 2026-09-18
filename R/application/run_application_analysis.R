@@ -52,7 +52,7 @@ dir.create(plot_dir, recursive = TRUE, showWarnings = FALSE)
 dir.create(result_dir, recursive = TRUE, showWarnings = FALSE)
 
 aid_csv <- file.path(data_dir, "Maaws_PublicData.csv")
-troop_density_csv <- file.path(data_dir, "final_filter.csv")
+troop_density_csv <- file.path(data_dir, "CSM_filter.csv")
 prepared_data_file <- file.path(data_dir, "prepared_application_data.rds")
 analysis_data_file <- file.path(data_dir, "application_data.rds")
 iraq_sf_file <- file.path(data_dir, "iraq_district_sf.rds")

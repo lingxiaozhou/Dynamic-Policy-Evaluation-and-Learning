@@ -21,3 +21,6 @@ outputs/results/simulation/
 
 # Application-derived RDS files contain detailed data and are not distributed
 data/application/*.rds
+
+# Full troop-density source retained locally; CSM_filter.csv is the published subset
+data/application/final_filter.csv

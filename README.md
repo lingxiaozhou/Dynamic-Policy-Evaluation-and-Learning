@@ -158,9 +158,9 @@ The application script expects these two local inputs before running:
 
 ```text
 data/application/Maaws_PublicData.csv
-data/application/final_filter.csv
+data/application/CSM_filter.csv
 ```
 
-These files are intentionally excluded from the repository while their public-release status is being confirmed. 
+Both input files are included in this repository. `CSM_filter.csv` is a minimal, US-only subset of the public troop-density source; see `data/application/EXTERNAL_DATA_INVENTORY.md` for provenance and the source DOI.
 
 
