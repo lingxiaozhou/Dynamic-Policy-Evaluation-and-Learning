@@ -19,7 +19,5 @@ progress.md
 # Per-replicate simulation output can grow very large
 outputs/results/simulation/
 
-# Restricted application inputs retained locally but not distributed
-data/application/Maaws_PublicData.csv
-data/application/final_filter.csv
+# Application-derived RDS files contain detailed data and are not distributed
 data/application/*.rds

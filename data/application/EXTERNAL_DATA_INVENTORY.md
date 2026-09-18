@@ -2,14 +2,14 @@
 
 The application code uses district-level Iraq data. It requires two local external files and rebuilds all other inputs from fixed Harvard Dataverse file IDs or package datasets.
 
-## Required local inputs not currently distributed
+## Application source inputs distributed in this repository
 
 - `Maaws_PublicData.csv`: CERP/aid project data used to construct district-day and district-week treatment indicators.
 - `final_filter.csv`: district-level troop-density source table used when constructing `tf_array_US` and `tf_array_US_missing`.
 
-These are the only local source files expected by `R/application/run_application_analysis.R`. They are intentionally excluded from this repository while permission to make them public is being confirmed. Until that determination is complete, readers can inspect the application code and the included saved results, but cannot rebuild the complete application dataset from the repository alone.
+These are the only local source files expected by `R/application/run_application_analysis.R`. Both are now included because their public release was confirmed by the collaborator. `Maaws_PublicData.csv` is from the Iraq Reconstruction Management System (IRMS), archived at the Harvard Dataverse DOI [10.7910/DVN/F2RDCJ](https://doi.org/10.7910/DVN/F2RDCJ) (see the Chris Blair article associated with that DOI). `final_filter.csv` contains troop-density data from the Harvard Dataverse dataset [10.7910/DVN/E9NX1Y](https://doi.org/10.7910/DVN/E9NX1Y).
 
-Generated application RDS files are also intentionally not distributed because they contain detailed data derived from these restricted inputs and the Dataverse sources.
+Generated application RDS files are intentionally not distributed because they contain detailed application data derived from these source inputs and the Dataverse sources.
 
 ## Harvard Dataverse 4.0 inputs
 
