@@ -162,10 +162,10 @@ data/application/Maaws_PublicData.csv
 data/application/CSM_filter.csv
 ```
 
-Both input files are included in this repository. `Maaws_PublicData.csv` contains CERP/aid project data from the Iraq Reconstruction Management System (IRMS), archived at the Harvard Dataverse DOI [10.7910/DVN/F2RDCJ](https://doi.org/10.7910/DVN/F2RDCJ) (see the Chris Blair article associated with that DOI). `CSM_filter.csv` is a minimal subset of the troop-density data from the Harvard Dataverse dataset [10.7910/DVN/E9NX1Y](https://doi.org/10.7910/DVN/E9NX1Y): it retains only observations with `british == 0` and the columns `District`, `week`, and `TForce` used by the application.
+Both input files are included in this repository. `Maaws_PublicData.csv` contains CERP/aid project data from the Iraq Reconstruction Management System (IRMS), archived at the Harvard Dataverse DOI [10.7910/DVN/F2RDCJ](https://doi.org/10.7910/DVN/F2RDCJ) (see the Chris Blair article associated with that DOI). `CSM_filter.csv` is a subset of the troop-density data from the Harvard Dataverse dataset [10.7910/DVN/E9NX1Y](https://doi.org/10.7910/DVN/E9NX1Y)
 
 The application also downloads these fixed Harvard Dataverse files at runtime: file IDs `8138903` (district boundaries), `8079278` (distance to cities), `8079275` (distance to rivers), `8079274` (distance to routes), and `8079276` (ethnicity covariates). The helper `read_dataverse_rds()` downloads each file to a temporary location and reads it as an RDS object. The workflow additionally uses `airstrikes`, `insurgencies`, `airstrikes_base`, and `iraq_window` from `geocausal` version `0.3.4`.
 
-Generated application RDS files (`application_data.rds`, `prepared_application_data.rds`, `iraq_district_sf.rds`, and `propensity_score_diagnostics.rds`) are intentionally excluded from GitHub because they contain detailed application data. They may remain in the local working directory after a run.
+
 
 
