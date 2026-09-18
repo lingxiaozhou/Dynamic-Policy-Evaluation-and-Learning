@@ -11,7 +11,7 @@ Rscript R/simulation/plots/policy_learning_plot.R
 Rscript R/simulation/plots/policy_evaluation_plot.R
 ```
 
-This writes the simulation figures under `outputs/plots/simulation/`. To inspect the computation for a single Monte Carlo replicate, run either simulation entry point with the arguments documented below. The empirical application is a separate, substantially heavier workflow that uses fixed public inputs from Harvard Dataverse plus two restricted local inputs and is described in [Application Analysis](#application-analysis).
+This writes the simulation figures under `outputs/plots/simulation/`. To inspect the computation for a single Monte Carlo replicate, run either simulation entry point with the arguments documented below. The empirical application is a separate, substantially heavier workflow that uses public inputs from Harvard Dataverse and is described in [Application Analysis](#application-analysis).
 
 ## Reproducibility Scope
 
@@ -20,7 +20,7 @@ This writes the simulation figures under `outputs/plots/simulation/`. To inspect
 | Recreate paper simulation figures | `R/simulation/plots/*.R` | Prepared objects in `data/simulation/` | PDFs in `outputs/plots/simulation/` |
 | Run one policy-learning replicate | `R/simulation/policy_learning_simulation.R` | Command-line seed/model/sample-size arguments | RDS file in `outputs/results/simulation/policy_learning/` |
 | Run one policy-evaluation replicate | `R/simulation/policy_evaluation_simulation.R` | Command-line seed/model/sample-size arguments | RDS file in `outputs/results/simulation/policy_evaluation/` |
-| Rebuild the empirical application | `R/application/run_application_analysis.R` | Two restricted local CSV files (not distributed), fixed Dataverse files, and `geocausal` package data | Intermediate data, result objects, figures, and console tables |
+| Rebuild the empirical application | `R/application/run_application_analysis.R` | Two published CSV files, fixed Dataverse files, and `geocausal` package data | Intermediate data, result objects, figures, and console tables |
 
 Prepared plotting objects are included so that readers can recreate the reported simulation figures without rerunning and aggregating every Monte Carlo replicate. The repository also contains saved application results and figures for comparison with a fresh run.
 
@@ -51,7 +51,8 @@ Dynamic-Policy-Evaluation-and-Learning/
         policy_evaluation_plot.R
   data/
     application/
-      EXTERNAL_DATA_INVENTORY.md
+      Maaws_PublicData.csv
+      CSM_filter.csv
     simulation/
       policy_learning_plot_data.rds
       policy_evaluation_plot_data.rds
@@ -64,7 +65,7 @@ Dynamic-Policy-Evaluation-and-Learning/
 
 The simulation files in `data/simulation/` are prepared plotting data. They let the plot scripts reproduce the paper figures directly without requiring readers to rerun all simulation replicates or use the internal combine scripts.
 
-The application workflow rebuilds its district-week analysis data from two restricted local application inputs plus fixed Harvard Dataverse file IDs. The two local inputs are not currently distributed in this repository while permission to release them is being confirmed.
+The application workflow rebuilds its district-week analysis data from the two published CSV inputs above, fixed Harvard Dataverse file IDs, and datasets from `geocausal`.
 
 ## Requirements
 
@@ -161,6 +162,10 @@ data/application/Maaws_PublicData.csv
 data/application/CSM_filter.csv
 ```
 
-Both input files are included in this repository. `CSM_filter.csv` is a minimal, US-only subset of the public troop-density source; see `data/application/EXTERNAL_DATA_INVENTORY.md` for provenance and the source DOI.
+Both input files are included in this repository. `Maaws_PublicData.csv` contains CERP/aid project data from the Iraq Reconstruction Management System (IRMS), archived at the Harvard Dataverse DOI [10.7910/DVN/F2RDCJ](https://doi.org/10.7910/DVN/F2RDCJ) (see the Chris Blair article associated with that DOI). `CSM_filter.csv` is a minimal subset of the troop-density data from the Harvard Dataverse dataset [10.7910/DVN/E9NX1Y](https://doi.org/10.7910/DVN/E9NX1Y): it retains only observations with `british == 0` and the columns `District`, `week`, and `TForce` used by the application.
+
+The application also downloads these fixed Harvard Dataverse files at runtime: file IDs `8138903` (district boundaries), `8079278` (distance to cities), `8079275` (distance to rivers), `8079274` (distance to routes), and `8079276` (ethnicity covariates). The helper `read_dataverse_rds()` downloads each file to a temporary location and reads it as an RDS object. The workflow additionally uses `airstrikes`, `insurgencies`, `airstrikes_base`, and `iraq_window` from `geocausal` version `0.3.4`.
+
+Generated application RDS files (`application_data.rds`, `prepared_application_data.rds`, `iraq_district_sf.rds`, and `propensity_score_diagnostics.rds`) are intentionally excluded from GitHub because they contain detailed application data. They may remain in the local working directory after a run.
 
 
