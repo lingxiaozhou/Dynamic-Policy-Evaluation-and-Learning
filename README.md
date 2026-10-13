@@ -169,22 +169,3 @@ The application also downloads these fixed Harvard Dataverse files at runtime: f
 
 
 
-
-### Data preparation for the package illustration
-
-Both the original application workflow and the package workflow provide the same `prepare_policy_data()` interface in `R/application/functions/application_utilities.R`:
-
-```r
-source("R/application/functions/application_utilities.R")
-example <- prepare_policy_data(
-  aid_csv = "data/application/Maaws_PublicData.csv",
-  troop_density_csv = "data/application/CSM_filter.csv",
-  projected = FALSE
-)
-```
-
-The result contains `policy_data`, a long table with one row per week and district, `ps_data` for propensity estimation, and projected district boundaries in `districts`. Policy predictors use the preceding week's information. The table includes both SAF and IED outcomes.
-
-`projected = FALSE` retains the historical geographic covariate files. `projected = TRUE` selects the current Dataverse files by filename and extracts covariates using projected district windows in kilometers. Distance covariates are converted to degree-equivalent units before applying the existing decay coefficients. Missing grid cells along the boundary are omitted from projected distance means. Changing spatial data versions can change covariate values and fitted results. The existing application workflow retains its default data selection.
-
-Website illustrations should source a verified commit rather than a moving branch. Keep this entry point and its returned names when replacing the original workflow with the package workflow.
