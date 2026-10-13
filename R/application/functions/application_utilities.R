@@ -1771,17 +1771,50 @@ count_points_by_window <- function(hfr, name, winlist, n_time = 499) {
   point_counts
 }
 
-prepare_application_data <- function(aid_csv, troop_density_csv) {
+prepare_application_data <- function(aid_csv, troop_density_csv,
+                                     event_window = NULL, projected = FALSE) {
   data("airstrikes", package = "geocausal")
   data("insurgencies", package = "geocausal")
-  data("airstrikes_base", package = "geocausal")
   data("iraq_window", package = "geocausal")
 
-  iraq_district <- read_dataverse_rds(8138903)
+  # Old files remain available by ID. Current projected grids are selected by name.
+  fileids <- c("iraq_district.rds" = 8138903, "cities_dist.rds" = 8079278,
+    "rivers_dist.rds" = 8079275, "routes_dist.rds" = 8079274, "ethnicity.rds" = 8079276)
+  if (projected) {
+    response <- httr::GET("https://dataverse.harvard.edu/api/datasets/:persistentId/",
+      query = list(persistentId = "doi:10.7910/DVN/IU8RQK"))
+    httr::stop_for_status(response)
+    files <- httr::content(response, as = "parsed")$data$latestVersion$files
+    fileids <- stats::setNames(
+      vapply(files, function(file) file$dataFile$id, numeric(1)),
+      vapply(files, function(file) file$dataFile$filename, character(1)))
+  }
+  iraq_district <- read_dataverse_rds(fileids[["iraq_district.rds"]])
   iraq_district_sf <- sf::st_as_sf(iraq_district)
   winlist <- lapply(seq_len(nrow(iraq_district_sf)), function(z) spatstat.geom::as.owin(iraq_district_sf$geometry[[z]]))
   names(winlist) <- iraq_district_sf$ADM3NAME
   district_names <- names(winlist)
+
+  # Event counts use the coordinate system expected by get_hfr().
+  project_points <- projected || "input_crs" %in% names(formals(geocausal::get_hfr)) ||
+    !is.null(attr(iraq_window, "crs"))
+  iraq_district_projected <- sf::st_transform(iraq_district_sf, 6646)
+  count_winlist <- winlist
+  application_window <- iraq_window
+  if (project_points) {
+    count_winlist <- lapply(sf::st_geometry(iraq_district_projected), function(polygon) {
+      spatstat.geom::rescale(spatstat.geom::as.owin(polygon), s = 1000, unitname = "km")
+    })
+    names(count_winlist) <- district_names
+    bounds <- sf::st_bbox(iraq_district_projected) / 1000
+    application_window <- spatstat.geom::owin(
+      xrange = bounds[c("xmin", "xmax")], yrange = bounds[c("ymin", "ymax")],
+      unitname = "km")
+    attr(application_window, "crs") <- sf::st_crs(iraq_district_projected)
+  }
+  raster_winlist <- if (projected) count_winlist else winlist
+  # The illustration uses degree-equivalent distances, as in the website.
+  distance_scale <- if (projected) 111.3195 else 1
 
   aid <- data.table::fread(aid_csv)
   aid <- subset(aid, Actual_Start != "")
@@ -1813,13 +1846,27 @@ prepare_application_data <- function(aid_csv, troop_density_csv) {
   airstr$time <- as.numeric(airstr$date - min(airstr$date) + 1)
   insurg$time <- as.numeric(insurg$date - min(insurg$date) + 1)
 
+  if (!is.null(event_window)) {
+    airstr <- airstr[spatstat.geom::inside.owin(
+      airstr$longitude, airstr$latitude, w = event_window), ]
+    insurg <- insurg[spatstat.geom::inside.owin(
+      insurg$longitude, insurg$latitude, w = event_window), ]
+  }
+  # Older geocausal releases do not project event coordinates internally.
+  if (project_points && !"input_crs" %in% names(formals(geocausal::get_hfr))) {
+    airstr_sf <- sf::st_as_sf(airstr, coords = c("longitude", "latitude"), crs = 4326)
+    insurg_sf <- sf::st_as_sf(insurg, coords = c("longitude", "latitude"), crs = 4326)
+    airstr[, c("longitude", "latitude")] <- sf::st_coordinates(sf::st_transform(airstr_sf, 6646)) / 1000
+    insurg[, c("longitude", "latitude")] <- sf::st_coordinates(sf::st_transform(insurg_sf, 6646)) / 1000
+  }
+
   treatment_hfr <- geocausal::get_hfr(
-    data = airstr, col = "type", window = iraq_window,
+    data = airstr, col = "type", window = application_window,
     time_col = "time", time_range = c(1, 499),
     coordinates = c("longitude", "latitude"), combine = TRUE
   )
   outcome_hfr <- geocausal::get_hfr(
-    data = insurg, col = "type", window = iraq_window,
+    data = insurg, col = "type", window = application_window,
     time_col = "time", time_range = c(1, 499),
     coordinates = c("longitude", "latitude"), combine = TRUE
   )
@@ -1839,30 +1886,30 @@ prepare_application_data <- function(aid_csv, troop_density_csv) {
   res_list$surge <- ifelse(dat_hfr$time >= min_s & dat_hfr$time <= max_s, 1, 0)
 
   for (nm in c("SAF", "all_outcome", "SOF", "all_airstrike", "IED")) {
-    res_list[[nm]] <- t(count_points_by_window(dat_hfr, nm, winlist = winlist))
+    res_list[[nm]] <- t(count_points_by_window(dat_hfr, nm, winlist = count_winlist))
     for (lag in c(1, 7, 14, 28, 30)) {
       res_list <- add_lagged_sum(res_list, colname = nm, lag = lag)
     }
   }
 
-  cities_dist <- read_dataverse_rds(8079278)
+  cities_dist <- read_dataverse_rds(fileids[["cities_dist.rds"]])
   cities_tmp <- lapply(seq_len(5), function(x) {
-    tmp <- sapply(seq_along(winlist), function(d) mean(cities_dist$distance[[x]][winlist[[d]]]))
-    exp(-(2 * x) * tmp)
+    tmp <- sapply(seq_along(winlist), function(d) mean(cities_dist$distance[[x]][raster_winlist[[d]]], na.rm = projected))
+    exp(-(2 * x) * tmp / distance_scale)
   })
   res_list$cities_dist <- Reduce("+", cities_tmp)
 
-  rivers_dist <- read_dataverse_rds(8079275)
-  routes_dist <- read_dataverse_rds(8079274)
-  ethnicity <- read_dataverse_rds(8079276)
+  rivers_dist <- read_dataverse_rds(fileids[["rivers_dist.rds"]])
+  routes_dist <- read_dataverse_rds(fileids[["routes_dist.rds"]])
+  ethnicity <- read_dataverse_rds(fileids[["ethnicity.rds"]])
 
   get_mode <- function(x) {
     ux <- unique(x[!is.na(x)])
     ux[which.max(tabulate(match(x, ux)))]
   }
-  res_list$rivers_dist <- sapply(seq_along(winlist), function(d) exp(-3 * mean(rivers_dist[winlist[[d]]])))
-  res_list$routes_dist <- sapply(seq_along(winlist), function(d) exp(-3 * mean(routes_dist[winlist[[d]]])))
-  res_list$pop <- sapply(seq_along(winlist), function(d) log(get_mode(ethnicity$total_pop[winlist[[d]]])))
+  res_list$rivers_dist <- sapply(seq_along(winlist), function(d) exp(-3 * mean(rivers_dist[raster_winlist[[d]]], na.rm = projected) / distance_scale))
+  res_list$routes_dist <- sapply(seq_along(winlist), function(d) exp(-3 * mean(routes_dist[raster_winlist[[d]]], na.rm = projected) / distance_scale))
+  res_list$pop <- sapply(seq_along(winlist), function(d) log(get_mode(ethnicity$total_pop[raster_winlist[[d]]])))
 
   aid_matrix <- data.table::dcast(aid_district, District ~ USE_DATE, value.var = "Total_cost")
   aid_array_cost <- t(as.matrix(aid_matrix[, -1]))
@@ -2056,6 +2103,38 @@ fit_application_propensity <- function(application, ps_vars = NULL) {
   application$ps_fit <- ps_fit
   application
 }
+
+# Stable long-table interface shared by the original and package workflows.
+# projected selects the spatial covariate files, not the policy estimator.
+prepare_policy_data <- function(aid_csv, troop_density_csv, projected = FALSE) {
+  application <- prepare_application_data(aid_csv, troop_density_csv,
+    projected = projected)
+  weekly <- application$data
+  aid <- weekly$aid_array_week
+  n_weeks <- nrow(aid)
+  n_districts <- ncol(aid)
+  policy_data <- data.frame(time = rep(seq_len(n_weeks), each = n_districts),
+    district = rep(colnames(aid), n_weeks), aid_week = as.vector(t(aid)),
+    SAF_week = as.vector(t(weekly$SAF_week)), IED_week = as.vector(t(weekly$IED_week)),
+    all_airstrike_week = as.vector(t(weekly$all_airstrike_week)))
+  policy_data$W <- as.vector(t(rbind(0, aid[-n_weeks, , drop = FALSE])))
+  for (variable in c("tf_array_US", "tf_array_US_missing", "all_airstrike_week_log",
+    "SAF_week_log", "IED_week_log")) {
+    history <- rbind(0, weekly[[variable]][-n_weeks, , drop = FALSE])
+    policy_data[[variable]] <- as.numeric(t(history))
+  }
+  policy_data <- policy_data[order(policy_data$time, policy_data$district), ]
+  rownames(policy_data) <- NULL
+  ps_data <- as.data.frame(application$ps_df)
+  if (is.numeric(ps_data$district)) {
+    ps_data$district <- as.character(application$iraq_district$ADM3NAME[ps_data$district])
+  }
+  ps_data <- ps_data[order(ps_data$time, ps_data$district), ]
+  rownames(ps_data) <- NULL
+  districts <- sf::st_transform(application$iraq_district, 6646)
+  list(policy_data = policy_data, ps_data = ps_data, districts = districts)
+}
+
 
 add_application_policy_terms <- function(data) {
   data$SAF_week_log_pop <- data$SAF_week_log * data$pop
