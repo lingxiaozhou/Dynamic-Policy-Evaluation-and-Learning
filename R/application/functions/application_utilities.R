@@ -1775,7 +1775,6 @@ prepare_application_data <- function(aid_csv, troop_density_csv,
                                      event_window = NULL, projected = FALSE) {
   data("airstrikes", package = "geocausal")
   data("insurgencies", package = "geocausal")
-  data("airstrikes_base", package = "geocausal")
   data("iraq_window", package = "geocausal")
 
   # Old files remain available by ID. Current projected grids are selected by name.
